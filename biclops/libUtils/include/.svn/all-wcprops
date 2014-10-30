@@ -1,0 +1,95 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/motion/!svn/ver/244/Stable/libUtils/include
+END
+joint.h
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/motion/!svn/ver/244/Stable/libUtils/include/joint.h
+END
+Kinematics.h
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/motion/!svn/ver/244/Stable/libUtils/include/Kinematics.h
+END
+mathfuncs.h
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/motion/!svn/ver/244/Stable/libUtils/include/mathfuncs.h
+END
+geometry.h
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/motion/!svn/ver/244/Stable/libUtils/include/geometry.h
+END
+DebugMacros.h
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/motion/!svn/ver/244/Stable/libUtils/include/DebugMacros.h
+END
+obstacle.h
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/motion/!svn/ver/244/Stable/libUtils/include/obstacle.h
+END
+Parser.h
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libUtils/include/Parser.h
+END
+link.h
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/motion/!svn/ver/244/Stable/libUtils/include/link.h
+END
+singleton.h
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/motion/!svn/ver/244/Stable/libUtils/include/singleton.h
+END
+utility.h
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/motion/!svn/ver/244/Stable/libUtils/include/utility.h
+END
+PortableSerial.h
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/motion/!svn/ver/244/Stable/libUtils/include/PortableSerial.h
+END
+angles.h
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libUtils/include/angles.h
+END
+transform.h
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/motion/!svn/ver/244/Stable/libUtils/include/transform.h
+END
+constants.h
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/motion/!svn/ver/244/Stable/libUtils/include/constants.h
+END
+matvec.h
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libUtils/include/matvec.h
+END

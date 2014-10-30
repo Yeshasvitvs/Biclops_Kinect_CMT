@@ -1,0 +1,23 @@
+<launch>
+
+<param name="robot_description" command="cat $(find biclops)/urdf/model.urdf" />
+
+<node pkg="biclops" type="biclops_node" name="Biclops" output="screen">
+</node>
+
+
+<!--Joint State Publisher node-->
+<node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub"  >
+</node>
+
+
+<node pkg="vision" type="vision_node" name="Kinect" output="screen">
+</node>
+
+<!--node pkg="turtlesim" type="turtle_teleop_key" name="Key_board" output="screen">
+</node-->
+
+
+</launch>
+
+

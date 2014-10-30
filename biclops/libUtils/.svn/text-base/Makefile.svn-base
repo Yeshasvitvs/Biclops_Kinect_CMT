@@ -1,0 +1,45 @@
+ifeq ($(OS),Windows_NT) 
+
+#Windows
+all:
+	if not exist build mkdir build
+	cd build && cmake -G "MinGW Makefiles" $(CMAKE_FLAGS) ..
+	cd build && mingw32-make -j4
+
+clean:
+	if exist build cd build && mingw32-make clean
+	if exist build rd /s /q build
+
+else 
+
+#Linux
+all:
+	@mkdir -p build
+	cd build && cmake $(CMAKE_FLAGS) ..
+	cd build && make -j4
+
+clean:
+	-cd build && make clean
+	rm -rf build
+
+INSTALL_ROOT=/usr/local
+
+INSTALL_FLAGS= --preserve-timestamps
+INSTALL_DIR_INC=$(INSTALL_ROOT)/include
+INSTALL_DIR_LIB=$(INSTALL_ROOT)/lib
+
+INSTALL_TARGET_INCS=$(wildcard include/*.h)
+INSTALL_TARGET_LIBS=$(wildcard lib/*.a lib/*.so)
+
+install: all
+	- install $(INSTALL_FLAGS) --mode=775 -d $(INSTALL_ROOT) $(INSTALL_DIR_INC) $(INSTALL_DIR_LIB) 
+	- install $(INSTALL_FLAGS) --mode=664 $(INSTALL_TARGET_LIBS)   $(INSTALL_DIR_LIB)
+	- install $(INSTALL_FLAGS) --mode=664 $(INSTALL_TARGET_INCS)   $(INSTALL_DIR_INC)
+	-cd $(INSTALL_ROOT) && rm -f lib/libUtils.so
+
+uninstall: all
+	-cd $(INSTALL_ROOT) && rm -f $(INSTALL_TARGET_INCS)
+	-cd $(INSTALL_ROOT) && rm -f $(INSTALL_TARGET_LIBS)
+	-cd $(INSTALL_ROOT) && rm -f lib/libUtils.so
+
+endif

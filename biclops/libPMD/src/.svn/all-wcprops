@@ -1,0 +1,107 @@
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/motion/!svn/ver/250/Stable/libPMD/src
+END
+PMDSerial.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/motion/!svn/ver/248/Stable/libPMD/src/PMDSerial.cpp
+END
+PMDGet.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMDGet.cpp
+END
+PMD.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMD.cpp
+END
+PMDController.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMDController.cpp
+END
+Makefile.MacOSX
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/motion/!svn/ver/244/Stable/libPMD/src/Makefile.MacOSX
+END
+PMDAxisUtils.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/motion/!svn/ver/250/Stable/libPMD/src/PMDAxisUtils.cpp
+END
+PMDNetwork.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMDNetwork.cpp
+END
+PMDTransport.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMDTransport.cpp
+END
+PMDParallel.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMDParallel.cpp
+END
+PMDUtils.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMDUtils.cpp
+END
+Sequencing.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libPMD/src/Sequencing.cpp
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/motion/!svn/ver/244/Stable/libPMD/src/.project
+END
+Compass.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/motion/!svn/ver/244/Stable/libPMD/src/Compass.cpp
+END
+.cproject
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/motion/!svn/ver/244/Stable/libPMD/src/.cproject
+END
+PMDAxisControl.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/motion/!svn/ver/244/Stable/libPMD/src/PMDAxisControl.cpp
+END
+PMDAxisHoming.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/motion/!svn/ver/250/Stable/libPMD/src/PMDAxisHoming.cpp
+END
+libPMD.dsp
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/motion/!svn/ver/244/Stable/libPMD/src/libPMD.dsp
+END

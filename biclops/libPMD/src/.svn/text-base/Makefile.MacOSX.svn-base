@@ -1,0 +1,73 @@
+# set INSTALL_ROOT to the path where you want the deliverables
+# i.e., include files, executables, and libraries
+INSTALL_ROOT=../..
+
+#set this to wherever the utils library is installed
+UTILSDIR = ../../libUtils
+
+STATIC_LIB=libPMD.a
+SHARED_LIB=libPMD.dylib
+
+TARGETS = $(STATIC_LIB) $(SHARED_LIB)
+
+SOURCES = PMD.cpp PMDAxisControl.cpp PMDController.cpp \
+          PMDNetwork.cpp PMDParallel.cpp PMDSerial.cpp \
+          PMDTransport.cpp PMDUtils.cpp Sequencing.cpp \
+	  Compass.cpp
+
+CXX=g++
+CPP=g++
+CC=g++
+
+OBJECTS = $(SOURCES:.cpp=.o)
+
+INCLUDES = -I../include -I$(UTILSDIR)/include
+
+CXXFLAGS = -DUNIX -fPIC -ansi -Wall -pedantic -O3
+CPPFLAGS = $(CXXFLAGS)
+CFLAGS=$(CXXFLAGS)
+
+all: deps.d $(TARGETS)
+
+$(STATIC_LIB): $(OBJECTS)
+	ar rcs $@ $^
+	cp $@ ../lib
+
+$(SHARED_LIB): $(OBJECTS)
+	$(CXX) -dynamiclib -o $@  -L../../libUtils/lib -lUtils $^ 
+	cp $@ ../lib
+	
+.cpp.o:
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<
+
+deps.d: $(SOURCES)
+	$(CXX) -MM $(INCLUDES) $(SOURCES) -MF $@
+
+clean:
+	- @ rm -rf $(OBJECTS)
+
+distclean: clean
+	- @ rm -ff $(TARGETS) deps.d
+
+INSTALL_FLAGS= --preserve-timestamps
+INSTALL_DIR_INC=$(INSTALL_ROOT)/include
+INSTALL_DIR_LIB=$(INSTALL_ROOT)/lib
+INSTALL_DIR_SHARE=$(INSTALL_ROOT)/share
+
+INSTALL_TARGET_LIBS=$(STATIC_LIB) $(SHARED_LIB)
+INSTALL_TARGET_INCS=$(wildcard ../include/*.h)
+#INSTALL_TARGET_SHARES+=../data/BiclopsDefault.cfg
+
+dump:
+	- @ echo LIBS=  $(INSTALL_TARGET_LIBS)
+	- @ echo INCS=  $(INSTALL_TARGET_INCS)
+	- @ echo SHARE= $(INSTALL_TARGET_SHARES)
+
+install: $(INSTALL_TARGET_LIBS) $(INSTALL_TARGET_INCS) $(INSTALL_TARGET_SHARES)
+	- @ install $(INSTALL_FLAGS) --mode=775 -d $(INSTALL_ROOT) $(INSTALL_DIR_INC) $(INSTALL_DIR_LIB) $(INSTALL_DIR_SHARE)
+	- @ install $(INSTALL_FLAGS) --mode=664 $(INSTALL_TARGET_LIBS)   $(INSTALL_DIR_LIB)
+	- @ install $(INSTALL_FLAGS) --mode=664 $(INSTALL_TARGET_INCS)   $(INSTALL_DIR_INC)
+#	- @ install $(INSTALL_FLAGS) --mode=664 $(INSTALL_TARGET_SHARES) $(INSTALL_DIR_SHARE)
+
+-include deps.d
+

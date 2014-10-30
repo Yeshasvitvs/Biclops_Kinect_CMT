@@ -1,0 +1,19 @@
+PROJECT(libPMD)
+
+cmake_minimum_required(VERSION 2.8)
+
+#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
+
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+
+include_directories(include ${PROJECT_SOURCE_DIR}/../libUtils/include)
+
+file(GLOB pmd_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp)
+
+ADD_DEFINITIONS(-Wall)
+
+ADD_LIBRARY(PMD ${pmd_SOURCES})
+
+

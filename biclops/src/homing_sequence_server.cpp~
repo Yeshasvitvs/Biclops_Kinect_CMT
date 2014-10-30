@@ -1,0 +1,27 @@
+#include <ros/ros.h>
+#include <biclops/HomingSequence.h>
+#include <Biclops.h>
+#include <PMDUtils.h>
+
+
+void Homing(string &path){
+
+	ROS_INFO("Performing Homing Sequence");
+	//biclops.Initialize(path);
+
+}
+
+
+int main(int argc, char **argv)
+{
+
+  ros::init(argc, argv, "homing_sequence_server");
+  ros::NodeHandle n;
+
+  ros::ServiceServer service = n.advertiseService("homing_sequence", Homing);
+  ROS_INFO("Ready for Homing Sequence");
+  ros::spin();
+
+  return 0;
+
+}

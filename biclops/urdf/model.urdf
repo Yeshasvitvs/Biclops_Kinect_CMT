@@ -1,0 +1,80 @@
+<robot name = "Biclops">
+
+<link name = "base_link">
+	<visual>
+		<geometry>
+			<cylinder length="0.1" radius="0.08" />
+		</geometry>
+		<origin xyz = "0.0 0.0 0.0" rpy = "0 0 0"/>
+		<material name = "red">
+			<color rgba = "1 0 0 1"/>
+		</material>
+	</visual>
+
+</link>
+
+<joint name = "PAN_JOINT" type = "revolute">
+	<parent link = "base_link"/>
+	<child link = "pan_link" />
+	<axis xyz = "0 0 1"/>
+	<origin xyz = "0 0 0.09"/>
+	 <limit effort="100.0" lower="-1.744" upper="1.744" velocity="3"/>
+</joint>
+
+<link name = "pan_link">
+    <visual>
+    <geometry>
+        <box size="0.04 0.04 0.08"/>
+      </geometry>
+	<origin xyz = "0.0 0.0 0.0" rpy = "0 0 0"/>
+		<material name = "grey">
+			<color rgba = "0.411765 0.411765 0.411765 0.8"/>
+		</material>
+    </visual>
+</link>
+
+
+<joint name = "TILT_JOINT" type = "revolute">
+	<parent link = "pan_link"/>
+	<child link = "tilt_link" />
+	<axis xyz = "0 0 1 " />	
+	<origin xyz = "0.0 0.0 0.04" rpy = "0 1.57075 0"/>
+	 <limit effort="100.0" lower="-0.697" upper="0.697" velocity="3"/>
+</joint>
+
+
+<link name = "tilt_link">
+    <visual>
+    <geometry>
+        <box size="0.1 0.08 0.015"/>
+      </geometry>
+		<material name = "white">
+			<color rgba = "1 1 1 1"/>
+		</material>
+	<origin xyz = "0.0 0.0 0.0" rpy = "0 -1.57075 0"/>
+    </visual>
+</link>
+
+<joint name = "moving_camera" type = "fixed">
+	<parent link = "tilt_link"/>
+	<child link = "kinect" />
+	<axis xyz = "0 0 1"/>
+	<origin xyz = "0.0 0.0 0.0" rpy = "-1.57075 0 0" />
+</joint> 
+
+
+<link name = "kinect">
+	<visual>
+		<geometry>
+			<box size = "0.03 0.25 0.03" />
+		</geometry> 
+	
+		<material name = "blue">
+			<color rgba = " 0 0 1 1"/>
+		</material>
+		<origin xyz = "-0.02 0.0 0.0" rpy = "0 0 0"/>
+	</visual>
+</link> 
+
+
+</robot>

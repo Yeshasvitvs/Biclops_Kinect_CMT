@@ -1,0 +1,659 @@
+//////////////////////////////////////////////////////////////////////////
+// Copyright © 2011 by Bryn Wolfe and TRACLabs Inc.                     //
+// All rights reserved. No part of this software or source code may be  //
+// used or reproduced in any form or by any means, or stored in a       //
+// database or retrieval system, without prior written aprroval from    //
+// TRACLabs. This notice must not be removed or modified under penalty  //
+// of United States copyright law.                                      //
+//////////////////////////////////////////////////////////////////////////
+//  PortableSerial.cpp -- (Adapted from PMDw32ser.cpp) serial IO
+//
+//  TRACLabs -- A division of Metrica, Inc.
+//
+
+#include <iostream>     // for cout
+using namespace std;    // pull in std namespace (for VC++)
+#include <time.h>
+
+#if !defined WIN32
+#include <errno.h>
+#include <string.h>  // for strcpy
+#include <sys/time.h>
+//#include <poll.h>
+#include <sys/select.h>
+#include <linux/serial.h>
+#include <asm-generic/ioctls.h>
+#endif
+
+
+#include "PortableSerial.h" // This class
+#include "Parser.h"         // For reading configuration files
+#include "DebugMacros.h"
+
+// Populate constants defined by this class
+const char PortableSerial::StartToken[] = "[portableSerial]";
+const char PortableSerial::StopToken[] = "[/portableSerial]";
+
+// Debugging declarations
+const char* PortableSerial::classStr = "PortableSerial::";
+//#define dbgCout cout << classStr << methodStr 
+//#define ifDbgCout if (GetDebugLevel() > 0) dbgCout
+//#define ifDbgCout1 if (GetDebugLevel() > 1) dbgCout
+
+#ifdef WIN32
+const char PortableSerial::defaultPortName[] = "COM1";
+#else
+const char PortableSerial::defaultPortName[] = "/dev/ttyS0";
+#endif
+const int PortableSerial::defaultBaud = 9600;
+const PortableSerial::StopBits PortableSerial::defaultStopBits 
+        = PortableSerial::OneStopBit;
+const PortableSerial::Parity PortableSerial::defaultParity 
+        = PortableSerial::NoParity;
+
+// ------------------------------------------------------------------------
+PortableSerial::PortableSerial() {
+    SetDefaults();
+}
+
+// ------------------------------------------------------------------------
+PortableSerial::PortableSerial(FILE *file, char *token)
+{
+    SetDefaults();
+    ReadConfig(file,token);
+}
+
+// ------------------------------------------------------------------------
+void PortableSerial::SetDefaults() {
+#ifdef WIN32
+    portHandle = INVALID_HANDLE_VALUE;
+#else
+    portHandle = -1;
+    sigemptyset(&sigSet);
+    sigaddset(&sigSet, SIGINT);
+#endif
+
+    isOpen = false;
+    debugLevel = 0;
+    SetConfig(defaultPortName,defaultBaud,defaultParity,defaultStopBits);
+
+    // Initialize the serial mutex
+    pthread_mutex_init (&serialMutex, NULL);
+
+}
+
+// ------------------------------------------------------------------------
+PortableSerial::~PortableSerial() {
+    Close();
+    pthread_mutex_destroy(&serialMutex);
+}
+
+// ------------------------------------------------------------------------
+bool PortableSerial::Open(
+    const char* portName, int baud, Parity parity, StopBits stopBits) {
+
+    // Record the communication parameters
+    strcpy(this->portName,portName);
+    this->baud   = baud;
+	this->parity = parity;
+	this->stopBits = stopBits;
+
+    return Open();
+
+}
+
+// ------------------------------------------------------------------------
+bool PortableSerial::Open() {
+
+    char methodStr[] = "Open: ";    // Debug defn
+
+    // Make sure that if a port is currently opened then it is closed.
+    Close();
+
+    // Get exclusive access to the serial interface
+    pthread_mutex_lock (&serialMutex);
+
+    // Open the port
+#ifdef WIN32
+    portHandle = CreateFile(   portName, GENERIC_READ|GENERIC_WRITE, 0, 
+//		                        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 
+		                        NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, 
+                                NULL );
+	if (portHandle != INVALID_HANDLE_VALUE) isOpen = true;
+#else
+    portHandle = open(portName, O_RDWR | O_NOCTTY | O_NONBLOCK);
+    if (portHandle >= 0) isOpen = true;
+#endif
+
+    // Configure the communication characteristics of the port.
+    if (isOpen) {
+
+#ifdef WIN32
+
+        // Translate PortableSerials internal definitions to OS-specific values.
+        const int windowsParityLUT[] = {NOPARITY,ODDPARITY,EVENPARITY, MARKPARITY,SPACEPARITY};
+        const int windowsStopBitsLUT[] = {ONESTOPBIT,ONE5STOPBITS,TWOSTOPBITS};
+
+	    DCB dcb;
+	    dcb.DCBlength         = sizeof(DCB);
+	    dcb.BaudRate          = baud;
+	    dcb.fBinary           = TRUE;               // Windows requires this to be true
+	    dcb.fParity           = FALSE;
+	    dcb.fOutxCtsFlow      = FALSE;
+	    dcb.fOutxDsrFlow      = FALSE;
+	    dcb.fDtrControl       = DTR_CONTROL_DISABLE; // High for port-powered RS232-485 converter
+	    dcb.fDsrSensitivity   = FALSE;
+	    dcb.fTXContinueOnXoff = FALSE;
+	    dcb.fOutX             = FALSE;
+	    dcb.fInX              = FALSE;
+	    dcb.fErrorChar        = FALSE;
+	    dcb.fNull             = FALSE;              // Don't want to discard null characters
+	    dcb.fRtsControl       = RTS_CONTROL_DISABLE; // High for port-powered RS232-485 converter
+	    dcb.fAbortOnError     = FALSE;              // Let this app detect and handle errors
+	    dcb.XonLim            = 0;
+	    dcb.XoffLim           = 0;
+	    dcb.ByteSize          = 8;                  // Does anybody use 7-bit characters anymore?
+	    dcb.Parity            = windowsParityLUT[parity];
+	    dcb.StopBits          = windowsStopBitsLUT[stopBits];
+	    dcb.XonChar           = 0;
+	    dcb.XoffChar          = 0;
+	    dcb.ErrorChar         = 0;
+	    dcb.EofChar           = 0;
+	    dcb.EvtChar           = 0;
+
+	    if (!SetCommState( portHandle, &dcb )) {
+            // Display a message about why SetCommState failed
+            LPVOID lpMsgBuf;
+            FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+                          FORMAT_MESSAGE_FROM_SYSTEM | 
+                          FORMAT_MESSAGE_IGNORE_INSERTS,
+                          NULL, GetLastError(),
+                          MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+                          (LPTSTR) &lpMsgBuf, 0, NULL);
+            dbgCout << "Opening of " << portName << " at baud "<<baud<<" failed because "
+                << (LPCTSTR)lpMsgBuf << endl;
+            LocalFree( lpMsgBuf );
+
+		    CloseHandle( portHandle );
+		    portHandle = INVALID_HANDLE_VALUE;
+		    isOpen = false;
+        } else {
+            dbgCout << "Opening of " << portName << " at baud "<<baud<<" is successful" << endl;
+        }
+
+#else
+
+        dbgCout << "Opening of " << portName << " at baud "<<baud<<" is successful" << endl;
+
+        // Clear the port descriptor.
+        bzero(&termIOData, sizeof(termIOData));
+
+        // Ignore breaks, ignore parity errors.
+        // Why we do these things, I do not know (BTW).
+        termIOData.c_iflag = IGNBRK | IGNPAR;
+
+        // Don't do anything special for outputs.
+        termIOData.c_oflag = 0;
+
+        // Set up the interface for raw (unmodified) transmission.
+        termIOData.c_lflag = 0;
+
+        // Fill structure baud rate entry using translator function
+        cfsetspeed(&termIOData, baud);
+
+        // Make port a local line (don't change owner of port) and enable
+        // character receiving.
+        termIOData.c_cflag |= (CLOCAL | CREAD);
+
+        // Translate PortableSerials internal definitions to OS-specific values.
+        switch (parity) {
+            case NoParity : 
+                if (stopBits != OneStopBit) termIOData.c_cflag |= CSTOPB;
+                break;
+            case OddParity :
+                termIOData.c_cflag |= PARENB;
+                termIOData.c_cflag |= PARODD;
+                if (stopBits != OneStopBit) termIOData.c_cflag |= CSTOPB;
+                break;
+            case EvenParity :
+                termIOData.c_cflag |= PARENB;
+                if (stopBits != OneStopBit) termIOData.c_cflag |= CSTOPB;
+                break;
+            case MarkParity : // Mark parity is simulated by two stop bits (ignore stop def)
+                termIOData.c_cflag |= CSTOPB;
+                break;
+            case SpaceParity : // Space parity is the same as no parity
+                break;
+        }
+
+        // Set the character size to 8 bits.
+        termIOData.c_cflag |= CS8;
+
+        // Issue the port changes.
+        tcsetattr(portHandle, TCSAFLUSH, &termIOData);
+
+	// Set the port in 485 mode (this only works on ISee IGEP products).
+        struct serial_rs485 ctrl485;
+        ctrl485.flags = SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND;
+        ctrl485.delay_rts_before_send = 0;
+        ctrl485.delay_rts_after_send = 0;
+        int status = ioctl(portHandle, TIOCSRS485, &ctrl485);
+        if (status != 0) {
+           dbgCout << "Unable to configure port in 485 mode, status " << status << endl;
+        }
+
+
+#endif
+
+        // Set the port timeouts to a default value because the interface 
+        // won't work without it.
+        SetTimeout(100);
+
+    } else {
+      dbgCout << "Opening of " << portName << " at baud "<<baud<<" is unsuccessful" << endl;
+
+    }
+
+    // Release exclusive access to the serial interface
+    pthread_mutex_unlock (&serialMutex);
+
+    FlushRecv();
+    return isOpen;
+
+}
+
+// ------------------------------------------------------------------------
+bool PortableSerial::SetTimeout(int msec) {
+    bool status = true;
+#ifdef WIN32
+    COMMTIMEOUTS timeouts;
+
+	if ( portHandle == INVALID_HANDLE_VALUE ) 
+        status = false;
+    else {
+        // Compute character time based on current baud rate.
+        // Read timeout is #chars*ReadTotalTimeoutMultiplier + ReadTotalTimeoutConstant
+        // ReadIntervalTimeout -> max msecs between two read characters
+        // Baud is really bits/second, so a single character time, 
+        // in milliseconds, is 1000msec/sec * 10 bits/character / bits/second =
+        // msec/char. Unfortunately, Windows time resolution is 1 msec, so any
+        // baud faster than 9600 baud results in a char time of 0.
+//        DWORD characterTimeInMilliseconds = max(10*1000/baud,1);
+//	    timeouts.ReadIntervalTimeout         = characterTimeInMilliseconds;
+	    timeouts.ReadIntervalTimeout         = 0;   // Only care about total time
+        timeouts.ReadTotalTimeoutMultiplier  = 10; // Should be based on baud!
+//        timeouts.ReadTotalTimeoutConstant    = 500;
+        timeouts.ReadTotalTimeoutConstant    = 1000; // RRB trying a shorter timeout!
+        timeouts.WriteTotalTimeoutMultiplier = 0;
+        timeouts.WriteTotalTimeoutConstant   = 0;
+
+	    status = !SetCommTimeouts( portHandle, &timeouts );
+    }
+#else
+	if (portHandle == 0) status = false;
+    else {
+        timeout=msec;
+    }
+#endif
+    return status;
+}
+
+// ------------------------------------------------------------------------
+void PortableSerial::Close() {
+
+    // Get exclusive access to the serial interface
+    pthread_mutex_lock (&serialMutex);
+
+    // Reset the serial configuration to defaults before closing the handle.
+#ifdef WIN32
+    if (portHandle != INVALID_HANDLE_VALUE)
+        CloseHandle(portHandle);
+    portHandle = INVALID_HANDLE_VALUE;
+#else
+    if (portHandle >= 0) 
+        close(portHandle);
+    portHandle = -1;
+#endif
+
+    isOpen = false;
+
+    // Release exclusive access to the serial interface
+    pthread_mutex_unlock (&serialMutex);
+
+}
+
+// ------------------------------------------------------------------------
+void PortableSerial::SetConfig(const char* portName, int baud, Parity parity, 
+                               StopBits stopBits) {
+    strcpy(this->portName,portName);
+    this->baud = baud;
+    this->parity = parity;
+    this->stopBits = stopBits;
+}
+
+// ------------------------------------------------------------------------
+void PortableSerial::GetConfig(char* portName, int &baud, 
+        Parity &parity, StopBits &stopBits) {
+    strcpy(portName, this->portName);
+    baud = this->baud;
+    parity = this->parity;
+    stopBits = this->stopBits;
+}
+
+// ------------------------------------------------------------------------
+bool PortableSerial::FlushRecv() {
+
+    // Get exclusive access to the serial interface
+    pthread_mutex_lock (&serialMutex);
+
+    bool flushSuccess = true;
+
+#ifdef WIN32
+	if (portHandle == INVALID_HANDLE_VALUE ) flushSuccess = false;
+    else PurgeComm(portHandle,PURGE_RXCLEAR);
+
+#else
+	if (portHandle < 0) 
+        flushSuccess = false;
+    else
+        tcflush(portHandle, TCIFLUSH);
+#endif
+
+    // Release exclusive access to the serial interface
+    pthread_mutex_unlock (&serialMutex);
+
+    return flushSuccess;
+}
+
+
+#ifdef WIN32
+DWORD PortableSerial::GetTime()
+{
+  return timeGetTime();
+}
+#else
+int64_t PortableSerial::GetTime() {
+  timeval tv;
+  gettimeofday(&tv, NULL);
+  return (int64_t) tv.tv_sec * 1000 + (int64_t) tv.tv_usec / 1000;
+}
+#endif
+
+
+#ifndef WIN32
+int PortableSerial::TimedRead(unsigned char* rdata, int rcount) {
+  char methodStr[] = "TimedRead: ";    // Debug defn
+  int linelen = 0;
+  
+  int64_t start_time = GetTime();
+  int64_t stop_time = start_time + timeout;
+
+  int rc=0;
+
+  while (true)
+    {
+#if 0
+      if (timeout >=0) {
+	fd_set rfds, efds;
+	FD_ZERO(&rfds);
+	FD_SET(portHandle, &rfds);
+
+	int64_t delay = stop_time - GetTime();
+	if (delay < 0) delay = 0;
+	struct timeval tv;
+	tv.tv_usec = (delay % 1000) * 1000;
+	tv.tv_sec = delay / 1000;
+	int retval = ::select(portHandle + 1, &rfds, NULL, NULL, &tv);
+	if (retval < 0)
+	  {
+	    if (errno == EINTR) {
+	      continue;
+	    }
+	    dbgCout << "error returned on select()\n";
+	    break;
+	  }
+	else if (!retval)
+	  {
+	    // TIMEOUT
+	    break;
+	  }
+      }
+#else
+	int64_t delay = stop_time - GetTime();
+	if (delay < 0) break;
+#endif
+      int bytes = read(portHandle, rdata + linelen, rcount-linelen);
+      if (bytes < 0)
+	{
+	  //	  if (errno == EINTR)
+	  //	    continue;
+	  // NO Debug flag at Utils level.
+	  //	  dbgCout << "error: "<< strerror(errno) << endl;
+	  //	  usleep(1);
+	  continue;
+	  //	  break;			// retry servo command
+	}
+
+      //      printf("read() returns %d, 0x%02X (%c)",
+      //	     bytes, (bytes > 0? rdata[linelen]: 0),
+      //	     (bytes > 0? rdata[linelen]: '-'));
+	  
+      if (bytes==0) {
+	//	usleep(1);
+	continue;
+      }
+      
+      linelen+=bytes;
+      if (linelen != rcount) // not end of line?
+	{
+	  // have a new character
+	  if (linelen > rcount)
+	    {
+	      dbgCout << "buffer overflow: " << rdata << endl;
+	      break;		// retry servo command
+	    }
+	}
+      else				// have a complete line
+	{
+	  rc=rcount;
+	  //	  cout << "Read "<<rcount<<" bytes\n";
+	  break;
+	}
+    }
+  
+  return rc;
+
+}
+#endif
+
+// ------------------------------------------------------------------------
+bool PortableSerial::Read(unsigned char* data, int count) {
+    bool success;
+
+    // Get exclusive access to the serial interface
+    pthread_mutex_lock (&serialMutex);
+
+#ifdef WIN32
+    unsigned long bytes;
+    if (ReadFile(portHandle, data, count, &bytes, NULL) != 0)
+        success = (bytes == (unsigned long)count);
+    else
+        success = false;
+#else
+	int iostatus=TimedRead(data, count);
+	success = iostatus == count;
+	//    if (!success)  cout << "failed read " << iostatus << " " << count<< " "<<errno << endl;
+#endif
+
+    // Release exclusive access to the serial interface
+    pthread_mutex_unlock (&serialMutex);
+
+    return success;
+}
+
+// ------------------------------------------------------------------------
+bool PortableSerial::Write(const unsigned char* data, int count) {
+
+    bool success;
+
+    // Get exclusive access to the serial interface
+    pthread_mutex_lock (&serialMutex);
+
+#ifdef WIN32
+	unsigned long bytes;
+    if (WriteFile(portHandle, data, count, &bytes, NULL) != 0)
+        success = (bytes == (unsigned long)count);
+    else 
+    	success = false;
+#else
+    // Flush the I/O buffers to ensure nothing is left over from any
+    // previous command.
+    tcflush(portHandle, TCIOFLUSH);
+	
+	success = write(portHandle, data, count) == count;
+#endif
+
+    // Release exclusive access to the serial interface
+    pthread_mutex_unlock (&serialMutex);
+
+    return success;
+
+}
+
+// ------------------------------------------------------------------------
+bool PortableSerial::WriteRead( const unsigned char* wdata, int wcount,
+                                unsigned char* rdata, int rcount) {
+
+    char methodStr[] = "WriteRead: ";    // Debug defn
+    bool success;
+
+    // Get exclusive access to the serial interface
+    pthread_mutex_lock (&serialMutex);
+    
+
+#ifdef WIN32
+	unsigned long bytes;
+    int ioStatus;
+	ioStatus = WriteFile( portHandle, wdata, wcount, &bytes, NULL );
+    if (ioStatus != 0) {
+        if (bytes == (unsigned long)wcount) 
+            success = true;
+        else
+            success = false;
+    } else success = false;
+#else
+    // Flush the I/O buffers to ensure nothing is left over from any
+    // previous command.
+    tcflush(portHandle, TCIOFLUSH);
+
+    size_t ioStatus = write(portHandle, wdata, wcount); 
+    success = ioStatus == (unsigned int)wcount;
+    if (!success)  dbgCout << "Failed write " << ioStatus << " " << errno << endl;
+#endif
+
+//DWORD time1 = GetTime();
+
+#ifdef WIN32
+    if (ioStatus != 0) {
+        unsigned long bytes;
+//        DWORD fsz = GetFileSize(portHandle,NULL);
+	    ioStatus = ReadFile(portHandle, rdata, rcount, &bytes, NULL);
+        if (ioStatus != 0) {
+            if (bytes == (unsigned long)rcount) {
+                // Got all the data requested.
+                success = true;
+//            } else if (bytes > 0) {
+//                // Got some, but not all data. Try to get the rest.
+//                unsigned long bytesLeft = rcount - bytes;
+//	            ioStatus = ReadFile(portHandle, rdata, bytesLeft, &bytes, NULL);
+//                if (ioStatus != 0) {
+//                    if (bytes == bytesLeft) 
+//                        success = true;
+//                    else
+//                        success = false;
+//                } else success = false;
+            } else 
+                success = false;
+        } else {
+            DWORD err = GetLastError();
+            ifDbgCout << "ReadFile error msg => " << err << endl;
+            success = false;
+        }
+//                char msgBuf[100];
+//                FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,NULL,0,0,msgBuf
+    }
+#else
+    if (ioStatus > 0) {
+      ioStatus = TimedRead(rdata, rcount); 
+      success = ioStatus == (unsigned int)rcount;
+     
+	//        if (!success)  cout << "Failed read " << ioStatus << " " << rcount<< " "<<errno << endl;
+    }
+#endif
+
+  //     DWORD time2=GetTime();      
+  //     if (success)
+  //     	std::cerr << "WRITE/READ TOOK "<<time2-time1<<" MILLISECONDS for "<<rcount<<" BYTES\n";
+
+    // Release exclusive access to the serial interface
+    pthread_mutex_unlock (&serialMutex);
+
+    return success;
+
+}
+
+// ------------------------------------------------------------------------
+void PortableSerial::ReadConfig(FILE *file, char *token)
+{
+    // Valid token definitions
+    const char TokenPort[] = "port";
+    const char TokenBaud[] = "baud";
+    const char TokenStopBits[] = "stopBits";
+    const char TokenParity[] = "parity";
+    const char TokenNoParity[] = "noParity";
+    const char TokenOddParity[] = "oddParity";
+    const char TokenEvenParity[] = "evenParity";
+    const char TokenDebugLevel[] = "debugLevel";
+
+    // Local declarations
+    bool            validToken = true;
+    unsigned int    val;
+    unsigned int uval;
+
+    // Prime token stream.
+    Parser::ReadToken(file,token);
+
+    // Parse the stream.
+    do {
+        if (!strcmp(token,TokenPort)) {
+            Parser::ReadToken(file,token);
+            strcpy(portName,token);
+        } else if (!strcmp(token,TokenDebugLevel)) {
+            Parser::ReadToken(file,token);
+            if (sscanf(token,"%u",&uval) == 1) {
+                debugLevel = uval;
+            } else validToken = false;
+        } else if (!strcmp(token,TokenBaud)) {
+            Parser::ReadToken(file,token);
+            validToken = sscanf(token,"%u",&val) == 1;
+            baud = val;
+        } else if (!strcmp(token,TokenStopBits)) {
+            Parser::ReadToken(file,token);
+            validToken = sscanf(token,"%u",&val) == 1;
+            if (val == 1) stopBits = OneStopBit;
+            else if (val == 2) stopBits = TwoStopBits;
+            else validToken = false;
+        } else if (!strcmp(token,TokenParity)) {
+            Parser::ReadToken(file,token);
+            if (!strcmp(token,TokenNoParity))
+                parity = NoParity;
+            else if (!strcmp(token,TokenOddParity))     
+                parity = OddParity;
+            else if (!strcmp(token,TokenEvenParity))    
+                parity = EvenParity;
+            else validToken = false;
+        } else validToken = false;
+        if (validToken) Parser::ReadToken(file,token);
+    } while (!feof(file) && validToken);
+
+}

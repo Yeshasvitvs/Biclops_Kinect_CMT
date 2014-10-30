@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/motion/!svn/ver/259/Stable/libUtils/src
+END
+Kinematics.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/motion/!svn/ver/244/Stable/libUtils/src/Kinematics.cpp
+END
+PortableSerial.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/motion/!svn/ver/259/Stable/libUtils/src/PortableSerial.cpp
+END
+MathTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libUtils/src/MathTest.cpp
+END
+angles.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/motion/!svn/ver/244/Stable/libUtils/src/angles.cpp
+END
+geometry.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libUtils/src/geometry.cpp
+END
+libUtils.dsp
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libUtils/src/libUtils.dsp
+END
+transform.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/motion/!svn/ver/244/Stable/libUtils/src/transform.cpp
+END
+Parser.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/motion/!svn/ver/244/Stable/libUtils/src/Parser.cpp
+END
+obstacle.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/motion/!svn/ver/244/Stable/libUtils/src/obstacle.cpp
+END
+link.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/motion/!svn/ver/244/Stable/libUtils/src/link.cpp
+END
+matvec.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/motion/!svn/ver/244/Stable/libUtils/src/matvec.cpp
+END
+joint.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/motion/!svn/ver/244/Stable/libUtils/src/joint.cpp
+END
+Makefile.MacOSX
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/motion/!svn/ver/244/Stable/libUtils/src/Makefile.MacOSX
+END

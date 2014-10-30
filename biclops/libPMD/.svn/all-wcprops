@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/motion/!svn/ver/265/Stable/libPMD
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/motion/!svn/ver/244/Stable/libPMD/CMakeLists.txt
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/motion/!svn/ver/252/Stable/libPMD/Makefile
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/motion/!svn/ver/244/Stable/libPMD/.project
+END
+.cproject
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/motion/!svn/ver/244/Stable/libPMD/.cproject
+END
