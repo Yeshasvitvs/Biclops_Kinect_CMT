@@ -1,0 +1,298 @@
+Setup Description 
+
+The lab setup contains a Biclops Pan- Tilt unit with a Microsoft Kinect Mounted on Top of it. Check the documentation of Biclops unit, in particular the following files present in the Biclops/Documentation directory :  Biclops Installation Manual.pdf , Biclops User Manual.pdf, PMD Configuration File Description.doc, PMD Programming Ref V1.7.pdf and PMD controller user's guide v1.4.pdf and the following files present in the Biclops/Software/Stable/libBiclops/samples directory : BiclopsBareBones.cpp, BiclopsHomingCalibration.cpp and Biclops_Demo.cpp to understand its functionality and programming. The application stack contains two ROS packages one for the Biclops unit and a vision package for Kinect unit. The whole setup works as the Kinect uses a state of the art CMT algorithm for tracking an object using RGB images and the pan tilt unit is used to move the kinect so that the tracking is continuous. 
+
+Installation Instructions 
+
+You can download the packages as such from the github or follow the instructions
+
+Biclops Package 
+
+Using the libraries given for Biclops unit control we can create our own Biclops ROS package for our application specific needs. Creating a separate package makes the code more modular, which is one of the basic principles behind ROS.
+
+Create a ROS package with the name “Biclops”
+Create Biclops_node.cpp file in src directory and just put the following code 
+	int main(){
+return 0 ;
+}
+Copy the Biclops.cpp into the src directory of the Biclops package
+Copy the Biclops.h into the include/Biclops directory 
+Copy the directories libPMD and libUtils into Biclops package
+Make the following changes in CMakeLists.txt
+
+Add the following lines after find_package(catkin REQUIRED COMPONENTS )
+
+add_subdirectory(libUtils)
+add_subdirectory(libPMD)
+
+Edit the lines under # include_directories(include) to 
+
+include_directories(include
+${catkin_INCLUDE_DIRS} ${libUtils_SOURCE_DIR}/include ${libPMD_SOURCE_DIR}/include 
+)
+
+Edit the lines under ## Declare a cpp library to 
+
+add_library(biclops
+   src/Biclops_node.cpp src/Biclops.cpp
+)
+
+Edit the lines under ## Declare a cpp executable to 
+
+add_executable(Biclops_node src/Biclops_node.cpp src/Biclops.cpp)
+
+Edit the lines under ## Specify libraries to link a library or executable target against to 
+
+ target_link_libraries(biclops_node
+   PMD Utils ${catkin_LIBRARIES} 
+ )
+
+The above instructions will get you started with accessing Biclops using ROS packages. To test if everything is configured correctly run catkin_make in your catkin workspace and see if the build is complete without any errors
+
+The biclops unit need a configuration file for its initialization. Copy the Biclops/Software/Stable/libBiclops/samples/BiclopsDefault.cfg file into Biclops package. Also go through the other configuration files with the file extensions .cfg, to better understand the parameters required for specific application of Biclops unit. To see if the Biclops unit can be used copy the code from biclops_node_simplehoming.cpp file to Biclops_node and then run catkin_make in your catkin_workspace. Now run the node using 
+
+	rosrun Biclops Biclops_node
+
+Now you could able to see Biclops unit being homed. If you dont see any motion and if you see communication errors on the command line, make sure that you gave the correct port value in the cfg file 
+
+Eg : port		/dev/ttyUSB0
+
+You can find your port value using  the following command
+
+ls  /dev/ttyUSB*
+
+If everything is configured correctly and if still the Biclops unit has communication errors please check the connections of the serial port, if they are broken or intact. 
+
+
+ROS Services 
+
+Check ROS turtorials on ROS Services and Messages to understand the basic concepts.
+
+http://wiki.ros.org/ROS/Tutorials/CreatingMsgAndSrv
+
+http://wiki.ros.org/ROS/Tutorials/UnderstandingServicesParams
+
+
+ A ros service can be invoked from the command line using 
+
+rosservice call /servicename {args}
+
+This can be demonstrated with the Biclops unit. We can create a service for homing the Biclops unit from the command line whenever we want. Use the code from biclops_node_homingservice.cpp. 
+
+This uses  Empty.h header file for service message types and the service callback function has just homing sequence of Biclops. This service can be called using 
+
+rosservice call /homing_sequence ‘{}’
+
+Note the empty arguemnts as we used empty.h header file without any arguments.
+
+URDF - Biclops Model
+
+URDF - Unified Robot Description Format is an xml format to describe a robot with various joints and Links. Go through the following tutorials step by step to better understand the concept of URDF and its implementation 
+
+http://wiki.ros.org/urdf/Tutorials/
+
+To understand this, we can visualize the model of Biclops in Rviz. 
+
+To use the robot model you need to set one ROS parameter “robot_description”. One way to do it is to use the following lines in a launch file 
+
+<param name="robot_description" command="cat $(find Biclops)/urdf/model.urdf" />
+
+Where Biclops is the package name and model.urdf file is inside the urdf directory of ROS package. 
+
+You can also set this from the command line
+
+For visualizing the model with joint movements use the following command when you are in Biclops package directory
+
+roslaunch urdf_tutorial display.launch model:=urdf/model.urdf gui:=True
+
+Check the urdf tutorials on ROS documentation to learn more about  using the URDF files with real robots.
+
+Biclops Teleop
+
+Check the following basic ROS tutorials to understand the turtlesim package and using tele-operation of the turtle from the keyboard arrow keys
+
+http://wiki.ros.org/ROS/Tutorials/UnderstandingNodes
+
+http://wiki.ros.org/ROS/Tutorials/UnderstandingTopics
+
+We can use the teleop node to move the Biclops Unit. Left and Right arrow keys can be used to control the PAN motion, Up and Down arrow keys can be used to control the TILT motion. To implement this check the code in biclops_node_teleop.cpp file
+
+
+Kinect Setup in Linux
+
+To ensure proper working of Kinect in Linux several drivers need to be installed. Please following the instructions for installing the drivers.
+
+Software
+To control the LED and the tilt motor, we will use freenect library (open source, unofficial):
+http://openkinect.org/
+Git: https://github.com/OpenKinect/libfreenect
+To control the video flux and get the depth map, we’ll take openNI drivers (open source, official):
+http://openni.org/
+Git: https://github.com/OpenNI/OpenNI
+We also need PrimeSense(the company that makes the Kinect) sensor module (open source):
+Warning: Official PrimeSense driver is not compatible with the Kinect, we need to take a modified version.
+http://www.primesense.com/
+Git: https://github.com/avin2/SensorKinect (it’s the modified version)
+
+Environment setup
+1- Download needed libraries/software.
+mkdir KinectLibs; cd KinectLibs
+git clone https://github.com/OpenKinect/libfreenect
+git clone https://github.com/OpenNI/OpenNI
+git clone https://github.com/avin2/SensorKinect
+sudo apt-get install cmake libglut3-dev pkg-config build-essential libxmu-dev libxi-dev libusb-1.0-0-dev python
+
+
+if you get “Unable to locate package libglut3-dev”, use this command instead:
+sudo apt-get install cmake freeglut3-dev pkg-config build-essential libxmu-dev libxi-dev libusb-1.0-0-dev python
+
+
+sudo add-apt-repository "deb http://archive.canonical.com/ lucid partner"
+sudo apt-get update
+sudo apt-get install sun-java6-jdk
+
+
+sudo apt-get install doxygen mono-complete graphviz
+1- Install openKinect (libFreenect)
+# in libfreenect directory, in the KinectLibs dir
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+sudo ldconfig /usr/local/lib64/
+Once libFreenect is installed, plug the Kinect, then set permission to R/W on the usb devices (motor and camera).
+sudo chmod a+rw /dev/bus/usb//
+sudo chmod a+rw /dev/bus/usb//
+lsusb | grep Xbox
+libusb couldn't open USB device /dev/bus/usb/001/006: Permission denied.
+libusb requires write access to USB device nodes.
+Now, let’s see if everything is correctly setup, just run glview, you should get something like
+Tip: you can play a bit with the features with these commands:
+‘w’-tilt up, ‘s’-level, ‘x’-tilt down, ‘0’-‘6′-select LED mode, ‘f’-video format
+On the left there is an openGL representation of the depth map, the pixel color is set according to the point’s distance to the sensor, on the right you can get the regular RGB camera view, or the infrared one (so you can see the infrared pattern, switch between them with ‘f’)
+Let’s now have a look on how to setup the gesture recognition libraries.
+2- Install OpenNi
+We just installed a perfectly fine working library here, that seems to handle all functions of the Kinect, why would we need another one?
+It’s because of the high level library, NITE, which works only with OpenNi drivers, but the OpenNi drivers (which are not Kinect specific) can’t control the Kinect motorized tilt or it’s led. So we need both libraries to have full access to the Kinect.
+So basically:
+we will use libfreenect to control the tilt and the led (so the device Xbox NUI Motor, which also handle the led).
+we will use OpenNi + Sensor module to get the camera streams (the device Xbox NUI Camera)
+we will use NITE libraries in concert with OpenNI to get the high level API (so gesture recognition, hand/skeleton tracking and so on)
+Note: Xbox NUI Audio device is handled by OpenNi, not libfreenect.
+# in OpenNI directory, in the ultratronik dir
+cd Platform/Linux/CreateRedist
+chmod +x ./RedistMaker
+./RedistMaker
+cd ../Redist/OpenNI-Bin-Dev-Linux-x64-v1.5.2.23/
+sudo ./install.sh
+
+
+Note: it’s Sensor-Bin-Linux-x64-v5.1.0.25for me, but might be different for you, there is only one directory in Redist/ anyway, just replace in case the name is wrong.
+4- Install NITE
+Download the library according to your system, then just run install.sh as root. that’s it.
+You’re now all set for using the kinect!
+Discover the Kinect potential with the examples
+Go into your NITE directory, then
+cd Samples/Bin/x64-Release ; ls Sample*
+
+
+These are the available examples, these cover pretty much all the high level recognition handled by NITE.
+You can find detailed documentation of these functions in NITE/Documentation/ directory, here is just a “quick start” guide for each example.
+NOTE : In case of installation errors please refer to the following page and the discussions part of it 
+http://www.kdab.com/setting-up-kinect-for-programming-in-linux-part-1/
+
+
+
+Vision Package 
+
+Create a ROS package with the name “vision”. and with opencv2 & cv_bridge as package dependencies 
+Create vision_node.cpp file in src directory and just put the following code 
+	int main(){
+return 0 ;
+}
+Copy the CMT.cpp into the src directory of the vision package
+Copy the CMT.h into the include/vision directory 
+Make the following changes in CMakeLists.txt
+
+Add the following lines after find_package(catkin REQUIRED COMPONENTS )
+
+find_package(OpenCV REQUIRED)
+find_package(Qt4 REQUIRED COMPONENTS
+  QtCore
+  QtGui
+)
+
+
+Edit the lines under # include_directories(include) to 
+
+include_directories( include
+${catkin_INCLUDE_DIRS} 
+)
+
+Edit the lines under ## Declare a cpp executable to 
+
+add_executable(vision_node src/vision_node.cpp src/CMT.cpp)
+
+Edit the lines under ## Specify libraries to link a library or executable target against to 
+
+ target_link_libraries(vision_node
+   ${catkin_LIBRARIES} ${OpenCV_LIBS}
+)
+
+
+The above instructions will get you started with making a vision ROS packages that uses CMT algorithm. To test if everything is configured correctly run catkin_make in your catkin workspace and see if the build is complete without any errors
+
+To understand the CMT algorithm please read the following publication 
+
+http://www.gnebehay.com/publications/wacv_2014/wacv_2014.pdf
+
+To see the working of CMT algorithm copy and paste the code from vision_node_simple.cpp to vision_node.cpp of src directory. Run catkin_make in the catking workspace and if there are no errors the package will be built successfully 
+
+It is assumed that the kinect is connected and made sure that it is working by running examples as mentioned before in Kinect installation part. Now run the following command to see CMT algorithm 
+
+	rosrun vision vision_node.cpp
+
+You will be prompted to enter if you want to select the region of interest manually. Enter “y” if you want to do it manually. By default the bounding box is at the center of the image frame of 640 X 480 resolution. Then an image screen appears, press enter when the object you want to track is in the field of view. Now use the mouse and draw a rectangular box around the object of interest and press enter. The CMT algorithm starts tracking and give you center, scale and orientation values of the object being tracked.
+
+ROS Messages 
+
+Check ROS turtorials on ROS Services and Messages to understand the basic concepts. In our case we use messages to send out data (center, scale and orientation) over ROS topics. The two types are messages we will look are in the msg directory of vision package with the names 
+
+center.msg  - message type for sending the center value alone 
+vision.msg   - message type for sending the center, scale and orientation values together.
+
+Follow the ROS turotials to configure the CMakeLists.txt and package.xml files to implement the custom messages
+
+
+Now copy the code from vision_node_withmsg.cpp file to vision_node.cpp file in src directory to see the center, scale and orientation values being published as ROS Topics.
+
+
+Calibration Details of the Biclops - Kinect assembly 
+
+The field of view of Kinect is  
+
+	430  Vertical 
+ 	570  Horizontal 
+
+Considering that the kinect is operated with 640 X 480 resolution, the PAN joint calibration is done as follows, 
+
+Considering the tracking is done such that the tracked point is always placed in the center of the field of view of Kinect, the following variables are declared
+
+pan_max_step=320;  (Half of the 640 pixel resolution)
+pan_max_angle=28.5; (Half of the 570  Horizontal)
+
+The values returned from the tracking algorithm results in the X pixel value on a 640 pixel resolution scale, the variable used in the code is center_point.CenterX in the biclops_node.cpp file
+
+The following code converts the returned pixel values into the corresponding PAN joint value 
+
+pan_pos_value=int (center_point.CenterX)-320;  (Getting the value on half resolution)
+   
+pan_pos_value= ( pan_pos_value / pan_max_step ) * pan_max_angle;
+
+
+A similar calibration is done for the TILT joint. For operating kinect at other resolutions the corresponding variables are to be changed to ensure correct tracking.
+
+
+For any further information or suggestions in the documentation, kindly write to me at 
+yeshasvitvs@gmail.com
